@@ -62,6 +62,7 @@ const renderModal = () => render(<WalletModal />);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  delete document.body.dataset.formDirty;
   mockContextValue = {
     isModalOpen: true,
     closeModal: mockCloseModal,
@@ -176,6 +177,32 @@ describe("WalletModal – connect action", () => {
     renderModal();
     fireEvent.click(screen.getByTestId("connect-now-button"));
     expect(mockConnect).not.toHaveBeenCalled();
+  });
+
+  it("prompts before switching wallets when the form is dirty and cancels the action", () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    document.body.dataset.formDirty = "true";
+
+    renderModal();
+    fireEvent.click(screen.getByTestId("wallet-option-freighter"));
+    fireEvent.click(screen.getByTestId("connect-now-button"));
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      "You have unsaved changes. Are you sure you want to switch wallets? All form inputs will be lost.",
+    );
+    expect(mockConnect).not.toHaveBeenCalled();
+  });
+
+  it("continues with the wallet switch when the dirty-form confirmation is accepted", () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    document.body.dataset.formDirty = "true";
+
+    renderModal();
+    fireEvent.click(screen.getByTestId("wallet-option-freighter"));
+    fireEvent.click(screen.getByTestId("connect-now-button"));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(mockConnect).toHaveBeenCalledWith("freighter");
   });
 
   it("shows 'Connecting…' text and disables wallet options while connecting", () => {
